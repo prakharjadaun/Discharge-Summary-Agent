@@ -23,15 +23,20 @@ class BaseAgent:
     ) -> list[dict]:
         results = []
         for tc in tool_calls:
-            fn = tc["function"]
             try:
-                inputs = json.loads(fn["arguments"])
-            except (json.JSONDecodeError, TypeError):
-                inputs = {}
-            result = await self._registry.dispatch(fn["name"], inputs, memory)
+                fn = tc["function"]
+                tool_call_id = tc["id"]
+                try:
+                    inputs = json.loads(fn["arguments"])
+                except (json.JSONDecodeError, TypeError):
+                    inputs = {}
+                result = await self._registry.dispatch(fn["name"], inputs, memory)
+            except (KeyError, TypeError) as e:
+                tool_call_id = tc.get("id", "unknown") if isinstance(tc, dict) else "unknown"
+                result = f"[MALFORMED_TOOL_CALL] {e}"
             results.append({
                 "role": "tool",
-                "tool_call_id": tc["id"],
+                "tool_call_id": tool_call_id,
                 "content": result,
             })
         return results

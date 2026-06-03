@@ -40,7 +40,8 @@ class ExecutorAgent(BaseAgent):
                 "Begin processing."
             )},
         ]
-        await self._run_loop(messages, memory)
+        step_budget = memory.step_count + settings.agent_max_steps
+        await self._run_loop(messages, memory, step_budget)
 
     async def address_feedback(self, issues: list[str], memory: SharedMemory) -> None:
         draft_snapshot = json.dumps(memory.draft or {}, indent=2)[:3000]
@@ -53,10 +54,11 @@ class ExecutorAgent(BaseAgent):
                 "Address each issue. Use flag_for_clinician_review if you cannot resolve it from the source documents."
             )},
         ]
-        await self._run_loop(messages, memory)
+        step_budget = memory.step_count + settings.agent_max_steps
+        await self._run_loop(messages, memory, step_budget)
 
-    async def _run_loop(self, messages: list[dict], memory: SharedMemory) -> None:
-        while not self._step_cap_reached(memory):
+    async def _run_loop(self, messages: list[dict], memory: SharedMemory, step_budget: int) -> None:
+        while memory.step_count < step_budget:
             content, tool_calls, _ = await self._provider.stream_complete(
                 messages=messages,
                 tools=self._registry.get_openai_definitions(),
@@ -82,7 +84,7 @@ class ExecutorAgent(BaseAgent):
         memory.flags.append(ClinicalFlag(
             field="agent_control",
             reason=f"Step cap ({settings.agent_max_steps}) reached — draft may be incomplete",
-            severity="MISSING",
+            severity="SAFETY",
             source_docs=[],
         ))
         self._compile_draft(memory)
