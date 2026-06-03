@@ -5,7 +5,7 @@ from src.agents.shared_memory import SharedMemory, ClinicalFlag
 class ReconcileMedicationsTool(BaseTool):
     name = "reconcile_medications"
     description = "Compare admission vs discharge medications and flag undocumented changes."
-    parameters = {"type": "object", "properties": {}}
+    parameters = {"type": "object", "properties": {}, "additionalProperties": False}
 
     async def execute(self, inputs: dict, memory: SharedMemory) -> str:
         admission_names = {m.name.upper(): m for m in memory.admission_medications}
@@ -18,7 +18,7 @@ class ReconcileMedicationsTool(BaseTool):
                     field=f"medication:{med.name}",
                     reason=f"NEW medication '{med.name}' on discharge — no documented reason",
                     severity="RECONCILIATION_NEEDED",
-                    source_docs=[],
+                    source_docs=[d.path for d in memory.source_documents],
                 ))
                 findings.append(f"NEW:{med.name}")
 
@@ -28,7 +28,7 @@ class ReconcileMedicationsTool(BaseTool):
                     field=f"medication:{med.name}",
                     reason=f"STOPPED medication '{med.name}' — not on discharge list, no documented reason",
                     severity="RECONCILIATION_NEEDED",
-                    source_docs=[],
+                    source_docs=[d.path for d in memory.source_documents],
                 ))
                 findings.append(f"STOPPED:{med.name}")
 

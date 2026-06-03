@@ -48,3 +48,11 @@ async def test_missing_inputs_returns_error():
     mem = SharedMemory(patient_id="p001")
     result = await tool.execute({}, mem)
     assert "[DETECT_ERROR" in result
+
+
+async def test_empty_values_returns_no_conflict():
+    tool = DetectConflictsTool()
+    mem = SharedMemory(patient_id="p001")
+    result = await tool.execute({"field": "allergies", "values": {}}, mem)
+    assert "no sources provided" in result
+    assert len(mem.conflicts) == 0

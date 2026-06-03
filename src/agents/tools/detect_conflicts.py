@@ -22,8 +22,16 @@ class DetectConflictsTool(BaseTool):
         field = inputs.get("field")
         values = inputs.get("values")
 
-        if not field or values is None:
-            return "[DETECT_ERROR: missing required inputs 'field' and 'values']"
+        missing = []
+        if not field:
+            missing.append("'field'")
+        if values is None:
+            missing.append("'values'")
+        if missing:
+            return f"[DETECT_ERROR: missing required input(s): {', '.join(missing)}]"
+
+        if not values:
+            return f"[NO_CONFLICT] {field}: no sources provided"
 
         unique_vals = set(v.strip().lower() for v in values.values())
         if len(unique_vals) <= 1:
