@@ -3,7 +3,6 @@ import json
 from typing import TYPE_CHECKING
 from src.providers.base.llm_provider import BaseLLMProvider
 from src.agents.shared_memory import SharedMemory
-from src.config.settings import settings
 
 if TYPE_CHECKING:
     from src.agents.tool_registry import ToolRegistry
@@ -14,9 +13,6 @@ class BaseAgent:
         self._provider = provider
         self._registry = registry
         self._name = name
-
-    def _step_cap_reached(self, memory: SharedMemory) -> bool:
-        return memory.step_count >= settings.agent_max_steps
 
     async def _dispatch_tool_calls(
         self, tool_calls: list[dict], memory: SharedMemory

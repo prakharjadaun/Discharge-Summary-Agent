@@ -60,9 +60,7 @@ async def test_executor_respects_step_cap():
     responses = [("", tool_call)] * 25
     provider = make_provider_sequence(responses)
 
-    with patch("src.agents.base_agent.settings") as ms_base, \
-         patch("src.agents.executor_agent.settings") as ms_exec:
-        ms_base.agent_max_steps = 5
+    with patch("src.agents.executor_agent.settings") as ms_exec:
         ms_exec.agent_max_steps = 5
         agent = ExecutorAgent(provider, registry, "executor")
         mem = SharedMemory(patient_id="p001")
