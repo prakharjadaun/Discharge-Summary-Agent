@@ -16,6 +16,6 @@ def test_settings_loads_from_env():
         assert s.azure_llm_deployment == "gpt-4o"
         assert s.azure_llm_api_version == "2025-01-01-preview"
         assert s.azure_openai_api_key.get_secret_value() == "test-key-123"  # SecretStr: use get_secret_value()
-        assert s.agent_max_steps == 20
+        assert s.agent_max_steps == 50
         assert s.agent_max_handoff_rounds == 3
         assert s.pdf_ocr_fallback_min_chars == 50

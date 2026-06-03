@@ -1,5 +1,6 @@
 from __future__ import annotations
 import asyncio
+import logging
 import types
 from typing import Awaitable, Callable
 from openai import AsyncAzureOpenAI, APITimeoutError, APIError
@@ -105,6 +106,7 @@ class AsyncAzureLLMProvider(BaseLLMProvider):
                             tool_calls_acc[idx]["function"]["arguments"] += tc_delta.function.arguments
 
         content = "".join(content_parts)
+
         tool_calls = list(tool_calls_acc.values()) if tool_calls_acc else None
 
         fake_response = types.SimpleNamespace(
@@ -123,3 +125,36 @@ class AsyncAzureLLMProvider(BaseLLMProvider):
         )
         step = await tracer.record(reasoning=reasoning, response=fake_response)
         return content, tool_calls, step
+
+    async def vision_transcribe(self, image_b64: str) -> str:
+        """Transcribe a scanned/handwritten page image using GPT-4o vision."""
+        try:
+            response = await self._client.chat.completions.create(
+                model=self._deployment,
+                messages=[
+                    {
+                        "role": "user",
+                        "content": [
+                            {
+                                "type": "text",
+                                "text": (
+                                    "This is a page from a patient medical record. "
+                                    "Transcribe ALL visible text — both printed and handwritten. "
+                                    "Preserve structure (headings, tables, rows). "
+                                    "If handwriting is unclear write your best reading followed by [unclear]. "
+                                    "Do not summarize, interpret, or add anything. Transcribe only."
+                                ),
+                            },
+                            {
+                                "type": "image_url",
+                                "image_url": {"url": f"data:image/png;base64,{image_b64}"},
+                            },
+                        ],
+                    }
+                ],
+                max_tokens=2000,
+            )
+            return response.choices[0].message.content or ""
+        except Exception as e:
+            logging.getLogger(__name__).warning("Vision transcription failed: %s", e)
+            return ""

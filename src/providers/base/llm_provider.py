@@ -22,3 +22,9 @@ class BaseLLMProvider(ABC):
         token_callback is called per streaming content chunk.
         """
         ...
+
+    async def vision_transcribe(self, image_b64: str) -> str:
+        """Transcribe a page image (handwritten or printed) using vision.
+        Override in provider implementations that support vision.
+        """
+        return ""

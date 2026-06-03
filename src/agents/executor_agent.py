@@ -30,8 +30,13 @@ You are done when you have processed all PDFs and all 12 sections.
 
 class ExecutorAgent(BaseAgent):
 
-    async def run(self, patient_dir: str, memory: SharedMemory) -> None:
-        pdf_paths = list(Path(patient_dir).glob("*.pdf"))
+    async def run(
+        self, patient_dir: str, memory: SharedMemory, pdf_files: list[str] | None = None
+    ) -> None:
+        if pdf_files is not None:
+            pdf_paths = [Path(f) for f in pdf_files]
+        else:
+            pdf_paths = list(Path(patient_dir).glob("*.pdf"))
         messages = [
             {"role": "system", "content": EXECUTOR_SYSTEM_PROMPT},
             {"role": "user", "content": (
