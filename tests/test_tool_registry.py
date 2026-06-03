@@ -23,7 +23,6 @@ class CrashTool(BaseTool):
     async def execute(self, inputs: dict, memory: SharedMemory) -> str:
         raise ValueError("intentional crash")
 
-@pytest.mark.asyncio
 async def test_registry_dispatch_success():
     registry = ToolRegistry()
     registry.register(EchoTool())
@@ -31,20 +30,25 @@ async def test_registry_dispatch_success():
     result = await registry.dispatch("echo", {"message": "hello"}, mem)
     assert result == "ECHO: hello"
 
-@pytest.mark.asyncio
 async def test_registry_dispatch_not_found():
     registry = ToolRegistry()
     mem = SharedMemory(patient_id="test")
     result = await registry.dispatch("nonexistent", {}, mem)
     assert "[TOOL_NOT_FOUND: nonexistent]" in result
 
-@pytest.mark.asyncio
 async def test_registry_dispatch_handles_exception():
     registry = ToolRegistry()
     registry.register(CrashTool())
     mem = SharedMemory(patient_id="test")
     result = await registry.dispatch("crash", {}, mem)
-    assert "[TOOL_ERROR: crash" in result
+    assert result == "[TOOL_ERROR: crash \u2014 intentional crash]"
+
+
+def test_registry_register_duplicate_raises():
+    registry = ToolRegistry()
+    registry.register(EchoTool())
+    with pytest.raises(ValueError, match="already registered"):
+        registry.register(EchoTool())
 
 def test_tool_openai_definition():
     tool = EchoTool()

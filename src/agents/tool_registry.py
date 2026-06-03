@@ -7,6 +7,8 @@ class ToolRegistry:
         self._tools: dict[str, BaseTool] = {}
 
     def register(self, tool: BaseTool) -> None:
+        if tool.name in self._tools:
+            raise ValueError(f"Tool '{tool.name}' is already registered")
         self._tools[tool.name] = tool
 
     def get_openai_definitions(self, names: list[str] | None = None) -> list[dict]:
