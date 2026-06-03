@@ -61,3 +61,15 @@ def test_cache_creates_directory_if_missing(tmp_path):
     cache.put(str(pdf), pages)
     assert cache_dir.exists()
     assert cache.get(str(pdf)) is not None
+
+
+def test_corrupt_cache_file_returns_none(tmp_path):
+    pdf = tmp_path / "doc.pdf"
+    pdf.write_bytes(b"content")
+    cache = PDFCache(str(tmp_path / ".cache"))
+    # Pre-compute hash and write garbage JSON directly
+    sha = cache._file_hash(str(pdf))
+    corrupt = tmp_path / ".cache" / f"{sha}.json"
+    corrupt.parent.mkdir(parents=True, exist_ok=True)
+    corrupt.write_text("NOT VALID JSON {{{", encoding="utf-8")
+    assert cache.get(str(pdf)) is None
