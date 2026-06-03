@@ -35,6 +35,7 @@ async def test_extract_section_found():
     )
 
     assert "[EXTRACTED]" in result
+    assert "Acute Gastroenteritis" in result
     assert "principal_diagnosis" in mem.extracted_sections
     field = mem.extracted_sections["principal_diagnosis"]
     assert field.confidence == "found"
@@ -87,3 +88,27 @@ async def test_extract_section_document_not_loaded():
     )
     assert "[EXTRACT_ERROR" in result
     assert "missing.pdf" in result
+
+
+async def test_extract_section_missing_inputs():
+    provider = make_provider('{"confidence": "found", "value": "x", "raw_quote": "x"}')
+    tool = ExtractSectionTool(provider)
+    mem = SharedMemory(patient_id="p001")
+
+    result = await tool.execute({}, mem)
+    assert "[EXTRACT_ERROR" in result
+
+
+async def test_extract_section_unknown_confidence_treated_as_missing():
+    llm_response = '{"confidence": "uncertain", "value": "something", "raw_quote": "quote"}'
+    provider = make_provider(llm_response)
+    tool = ExtractSectionTool(provider)
+    mem = make_memory_with_doc("some text")
+
+    result = await tool.execute(
+        {"document_path": "discharge.pdf", "section_name": "allergies"}, mem
+    )
+
+    assert "[MISSING]" in result
+    assert len(mem.flags) == 1
+    assert mem.flags[0].severity == "MISSING"

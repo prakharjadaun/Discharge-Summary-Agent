@@ -63,7 +63,7 @@ class ExtractSectionTool(BaseTool):
             messages=messages, tools=None,
             memory=memory, agent="executor",
             action="extract_section",
-            inputs={"section": section_name, "doc": doc_path},
+            inputs={"section_name": section_name, "document_path": doc_path},
         )
 
         try:
@@ -81,22 +81,33 @@ class ExtractSectionTool(BaseTool):
         )
         memory.extracted_sections[section_name] = field
 
-        if confidence == "missing":
+        if confidence not in ("found", "missing", "pending"):
             memory.flags.append(ClinicalFlag(
                 field=section_name,
-                reason=f"Section '{section_name}' not found in {doc_path}",
+                reason=f"Section '{section_name}': unrecognised confidence '{confidence}' — treating as missing",
                 severity="MISSING",
                 source_docs=[doc_path],
             ))
+            return f"[MISSING] {section_name}: unrecognised confidence '{confidence}'"
+
+        if confidence == "missing":
+            if not any(f.field == section_name and f.severity == "MISSING" for f in memory.flags):
+                memory.flags.append(ClinicalFlag(
+                    field=section_name,
+                    reason=f"Section '{section_name}' not found in {doc_path}",
+                    severity="MISSING",
+                    source_docs=[doc_path],
+                ))
             return f"[MISSING] {section_name} not found in {doc_path}"
 
         if confidence == "pending":
-            memory.flags.append(ClinicalFlag(
-                field=section_name,
-                reason=f"Section '{section_name}' is pending: {value}",
-                severity="PENDING",
-                source_docs=[doc_path],
-            ))
+            if not any(f.field == section_name and f.severity == "PENDING" for f in memory.flags):
+                memory.flags.append(ClinicalFlag(
+                    field=section_name,
+                    reason=f"Section '{section_name}' is pending: {value}",
+                    severity="PENDING",
+                    source_docs=[doc_path],
+                ))
             return f"[PENDING] {section_name}: {value}"
 
         return f"[EXTRACTED] {section_name}: {value}"
