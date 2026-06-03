@@ -10,10 +10,12 @@ def test_settings_loads_from_env():
         "AZURE_OPENAI_API_KEY": "test-key-123",
     }
     with patch.dict(os.environ, env, clear=True):
-        from importlib import reload
-        import src.config.settings as s
-        reload(s)
-        assert s.settings.azure_llm_deployment == "gpt-4o"
-        assert s.settings.agent_max_steps == 20
-        assert s.settings.agent_max_handoff_rounds == 3
-        assert s.settings.pdf_ocr_fallback_min_chars == 50
+        from src.config.settings import Settings
+        s = Settings(_env_file=None)  # bypass .env file entirely — hermetic test
+        assert s.azure_openai_endpoint == "https://example.azure.com/"
+        assert s.azure_llm_deployment == "gpt-4o"
+        assert s.azure_llm_api_version == "2025-01-01-preview"
+        assert s.azure_openai_api_key.get_secret_value() == "test-key-123"  # SecretStr: use get_secret_value()
+        assert s.agent_max_steps == 20
+        assert s.agent_max_handoff_rounds == 3
+        assert s.pdf_ocr_fallback_min_chars == 50

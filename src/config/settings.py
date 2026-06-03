@@ -1,10 +1,11 @@
+from pydantic import SecretStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 class Settings(BaseSettings):
     azure_openai_endpoint: str
     azure_llm_deployment: str
     azure_llm_api_version: str
-    azure_openai_api_key: str
+    azure_openai_api_key: SecretStr  # prevents key leaking in logs/tracebacks
 
     agent_max_steps: int = 20
     agent_max_handoff_rounds: int = 3
