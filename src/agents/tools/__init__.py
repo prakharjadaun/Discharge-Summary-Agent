@@ -9,9 +9,9 @@ from src.agents.tools.flag_for_clinician_review import FlagForClinicianReviewToo
 from src.agents.tools.validate_completeness import ValidateCompletenessTool
 
 
-def build_executor_registry(provider: BaseLLMProvider) -> ToolRegistry:
+def build_executor_registry(provider: BaseLLMProvider, cache=None) -> ToolRegistry:
     registry = ToolRegistry()
-    registry.register(ReadPDFTool())
+    registry.register(ReadPDFTool(provider, cache=cache))
     registry.register(ExtractSectionTool(provider))
     registry.register(ReconcileMedicationsTool())
     registry.register(DetectConflictsTool())
