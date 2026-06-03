@@ -109,3 +109,71 @@ async def test_stream_complete_tool_call():
         assert tool_calls is not None
         assert tool_calls[0]["function"]["name"] == "read_pdf"
         assert json.loads(tool_calls[0]["function"]["arguments"]) == {"path": "test.pdf"}
+
+
+async def test_stream_complete_retries_and_succeeds():
+    """Provider retries on APIError and succeeds on the third attempt."""
+    from src.providers.azure.llm_provider import AsyncAzureLLMProvider
+    from openai import APIError
+
+    with patch("src.providers.azure.llm_provider.AsyncAzureOpenAI"):
+        mem = SharedMemory(patient_id="test")
+        provider = AsyncAzureLLMProvider.__new__(AsyncAzureLLMProvider)
+        provider._deployment = "gpt-4o"
+        provider._emit_callback = None
+
+        call_count = 0
+        async def fake_create(**kwargs):
+            nonlocal call_count
+            call_count += 1
+            if call_count < 3:
+                raise APIError("rate limit", request=MagicMock(), body={})
+            return async_iter(make_stream_chunks(content="recovered"))
+
+        provider._client = MagicMock()
+        provider._client.chat.completions.create = fake_create
+
+        with patch("src.providers.azure.llm_provider.asyncio.sleep", new_callable=AsyncMock):
+            content, tool_calls, step = await provider.stream_complete(
+                messages=[{"role": "user", "content": "hi"}],
+                tools=None,
+                memory=mem,
+                agent="executor",
+                action="plan",
+                inputs={},
+            )
+
+        assert content == "recovered"
+        assert call_count == 3
+
+
+async def test_stream_complete_all_retries_fail():
+    """Provider returns [LLM_CALL_FAILED] after all 3 attempts fail."""
+    from src.providers.azure.llm_provider import AsyncAzureLLMProvider
+    from openai import APITimeoutError
+
+    with patch("src.providers.azure.llm_provider.AsyncAzureOpenAI"):
+        mem = SharedMemory(patient_id="test")
+        provider = AsyncAzureLLMProvider.__new__(AsyncAzureLLMProvider)
+        provider._deployment = "gpt-4o"
+        provider._emit_callback = None
+
+        async def always_fail(**kwargs):
+            raise APITimeoutError(request=MagicMock())
+
+        provider._client = MagicMock()
+        provider._client.chat.completions.create = always_fail
+
+        with patch("src.providers.azure.llm_provider.asyncio.sleep", new_callable=AsyncMock):
+            content, tool_calls, step = await provider.stream_complete(
+                messages=[{"role": "user", "content": "hi"}],
+                tools=None,
+                memory=mem,
+                agent="executor",
+                action="plan",
+                inputs={},
+            )
+
+        assert content == "[LLM_CALL_FAILED]"
+        assert tool_calls is None
+        assert "[LLM_CALL_FAILED]" in step.result

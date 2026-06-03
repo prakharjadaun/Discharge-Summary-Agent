@@ -1,5 +1,5 @@
 from __future__ import annotations
-import json
+import asyncio
 import types
 from typing import Awaitable, Callable
 from openai import AsyncAzureOpenAI, APITimeoutError, APIError
@@ -7,6 +7,9 @@ from src.providers.base.llm_provider import BaseLLMProvider
 from src.providers.base.tracer import LLMCallTracer
 from src.agents.shared_memory import SharedMemory, TraceStep
 from src.config.settings import settings
+
+
+_MAX_REASONING_PREVIEW = 200
 
 
 class AsyncAzureLLMProvider(BaseLLMProvider):
@@ -44,13 +47,15 @@ class AsyncAzureLLMProvider(BaseLLMProvider):
                     if attempt == 2:
                         step = await tracer.record_failure(str(e))
                         return "[LLM_CALL_FAILED]", None, step
+                    await asyncio.sleep(2 ** attempt)
+            raise RuntimeError("stream_complete retry loop exhausted without returning")
 
     async def _do_stream(
         self,
         messages: list[dict],
         tools: list[dict] | None,
         tracer: LLMCallTracer,
-        token_callback,
+        token_callback: Callable[[str], Awaitable[None]] | None,
     ) -> tuple[str, list[dict] | None, TraceStep]:
 
         kwargs: dict = dict(
@@ -112,8 +117,8 @@ class AsyncAzureLLMProvider(BaseLLMProvider):
             )
         )
         reasoning = (
-            content[:200] if content
-            else f"tool_call: {tool_calls_acc[0]['function']['name']}" if tool_calls_acc
+            content[:_MAX_REASONING_PREVIEW] if content
+            else f"tool_call: {next(iter(tool_calls_acc.values()))['function']['name']}" if tool_calls_acc
             else "no content"
         )
         step = await tracer.record(reasoning=reasoning, response=fake_response)
