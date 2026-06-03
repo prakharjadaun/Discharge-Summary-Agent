@@ -75,3 +75,24 @@ async def test_critic_calls_tools_before_verdict():
     feedback = await agent.review(mem)
     assert feedback.approved is True
     registry.dispatch.assert_called_once()
+
+
+async def test_critic_hits_step_cap():
+    from unittest.mock import patch
+    tool_call = [{"id": "c", "type": "function", "function": {"name": "flag_for_clinician_review", "arguments": '{"field": "f", "reason": "r", "severity": "MISSING"}'}}]
+    provider = MagicMock()
+    provider.stream_complete = AsyncMock(return_value=("", tool_call, make_step()))
+
+    registry = MagicMock()
+    registry.get_openai_definitions.return_value = []
+    registry.dispatch = AsyncMock(return_value="[FLAGGED]")
+
+    with patch("src.agents.critic_agent.settings") as ms:
+        ms.agent_max_steps = 2
+        agent = CriticAgent(provider, registry, "critic")
+        mem = SharedMemory(patient_id="p001")
+        mem.draft = {}
+        feedback = await agent.review(mem)
+
+    assert feedback.approved is False
+    assert any("cap" in issue.lower() for issue in feedback.issues)

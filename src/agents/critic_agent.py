@@ -3,6 +3,7 @@ import json
 from dataclasses import dataclass, field
 from src.agents.base_agent import BaseAgent
 from src.agents.shared_memory import SharedMemory
+from src.config.settings import settings
 
 CRITIC_SYSTEM_PROMPT = """You are a clinical safety reviewer. The Executor has produced a discharge summary draft.
 
@@ -38,6 +39,7 @@ class CriticFeedback:
 class CriticAgent(BaseAgent):
 
     async def review(self, memory: SharedMemory) -> CriticFeedback:
+        step_budget = memory.step_count + settings.agent_max_steps
         draft_text = json.dumps(memory.draft or {}, indent=2)[:4000]
         flags_text = json.dumps([f.model_dump() for f in memory.flags], indent=2)[:2000]
 
@@ -50,7 +52,7 @@ class CriticAgent(BaseAgent):
             )},
         ]
 
-        while not self._step_cap_reached(memory):
+        while memory.step_count < step_budget:
             content, tool_calls, _ = await self._provider.stream_complete(
                 messages=messages,
                 tools=self._registry.get_openai_definitions(),
@@ -74,9 +76,9 @@ class CriticAgent(BaseAgent):
                 if approved:
                     return CriticFeedback(approved=True)
                 issues = [
-                    line.lstrip("-• ").strip()
+                    line.lstrip("-•* ").strip()
                     for line in content.splitlines()
-                    if line.strip() and not line.strip().lower().startswith("issues found")
+                    if line.strip() and line.strip()[0] in ("-", "•", "*")
                 ]
                 return CriticFeedback(approved=False, issues=issues)
 
