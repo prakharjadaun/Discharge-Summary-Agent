@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import asyncio
+import logging
 import fitz
 from PIL import Image
 import pytesseract
@@ -24,9 +26,29 @@ class ReadPDFTool(BaseTool):
     }
 
     async def execute(self, inputs: dict, memory: SharedMemory) -> str:
-        path = inputs["path"]
+        path = inputs.get("path")
+        if not path:
+            return "[READ_PDF_FAILED: missing required input 'path']"
+
+        pages_text: list[str] = []
+        final_method = "pymupdf"
+
         try:
-            doc = fitz.open(path)
+            with fitz.open(path) as doc:
+                for page in doc:
+                    text = page.get_text().strip()
+                    if len(text) < settings.pdf_ocr_fallback_min_chars:
+                        ocr_text = await asyncio.get_event_loop().run_in_executor(
+                            None, self._ocr_page, page
+                        )
+                        if ocr_text:
+                            text = ocr_text
+                            if final_method == "pymupdf":
+                                final_method = "ocr"
+                        else:
+                            if final_method == "pymupdf":
+                                final_method = "failed"
+                    pages_text.append(text)
         except Exception as e:
             src = SourceDocument(
                 path=path,
@@ -37,22 +59,6 @@ class ReadPDFTool(BaseTool):
             memory.source_documents.append(src)
             return f"[READ_PDF_FAILED] {path} — {str(e)}"
 
-        pages_text: list[str] = []
-        final_method = "pymupdf"
-
-        for page in doc:
-            text = page.get_text().strip()
-            if len(text) < settings.pdf_ocr_fallback_min_chars:
-                ocr_text = self._ocr_page(page)
-                if ocr_text:
-                    text = ocr_text
-                    final_method = "ocr"
-                else:
-                    # OCR yielded nothing; keep whatever pymupdf found (may be empty)
-                    final_method = "failed"
-            pages_text.append(text)
-
-        doc.close()
         full_text = "\n".join(pages_text)
         src = SourceDocument(
             path=path,
@@ -68,5 +74,7 @@ class ReadPDFTool(BaseTool):
             pix = page.get_pixmap(dpi=200)
             img = Image.frombytes("RGB", [pix.width, pix.height], pix.samples)
             return pytesseract.image_to_string(img).strip()
-        except Exception:
+        except Exception as e:
+            import logging
+            logging.getLogger(__name__).warning("OCR failed for page: %s", e)
             return ""

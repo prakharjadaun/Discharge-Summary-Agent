@@ -2,7 +2,7 @@ from pathlib import Path
 from src.agents.tools.read_pdf import ReadPDFTool
 from src.agents.shared_memory import SharedMemory
 
-FIXTURE_PDF = Path("tests/fixtures/sample.pdf")
+FIXTURE_PDF = Path(__file__).parent.parent / "fixtures" / "sample.pdf"
 
 
 async def test_read_pdf_extracts_text():
@@ -39,4 +39,5 @@ async def test_read_pdf_ocr_fallback_triggered_for_sparse_page(tmp_path):
     result = await tool.execute({"path": str(pdf_path)}, mem)
 
     # blank page triggers OCR; extraction_method is "ocr" or "failed" depending on tesseract output
-    assert mem.source_documents[0].extraction_method in ("ocr", "failed", "pymupdf")
+    assert mem.source_documents[0].extraction_method in ("ocr", "failed")
+    assert "[READ_PDF_OK]" in result or "[READ_PDF_FAILED]" in result
