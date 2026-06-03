@@ -23,4 +23,4 @@ async def test_missing_medications_input():
     tool = DrugInteractionLookupTool()
     mem = SharedMemory(patient_id="p001")
     result = await tool.execute({}, mem)
-    assert "no known interactions" in result.lower() or "[DRUG_LOOKUP" in result
+    assert "no known interactions" in result.lower()

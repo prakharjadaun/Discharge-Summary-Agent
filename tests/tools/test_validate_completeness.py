@@ -41,3 +41,13 @@ async def test_validate_handles_bad_json_gracefully():
     mem = SharedMemory(patient_id="p001")
     result = await tool.execute({}, mem)
     assert "[VALIDATION_OK]" in result  # bad JSON → empty issues → OK
+
+
+async def test_validate_writes_flags_for_issues():
+    provider = make_provider('["principal_diagnosis is marked found but raw_quote is null"]')
+    tool = ValidateCompletenessTool(provider)
+    mem = SharedMemory(patient_id="p001")
+    await tool.execute({}, mem)
+    assert len(mem.flags) == 1
+    assert mem.flags[0].severity == "MISSING"
+    assert "principal_diagnosis" in mem.flags[0].reason

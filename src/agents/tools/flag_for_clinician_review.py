@@ -25,7 +25,7 @@ class FlagForClinicianReviewTool(BaseTool):
         reason = inputs.get("reason")
         severity = inputs.get("severity")
 
-        if not field or not reason or not severity:
+        if field is None or reason is None or severity is None:
             missing = [k for k, v in [("field", field), ("reason", reason), ("severity", severity)] if not v]
             return f"[FLAG_ERROR: missing required input(s): {', '.join(missing)}]"
 

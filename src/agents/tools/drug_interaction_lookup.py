@@ -26,19 +26,20 @@ class DrugInteractionLookupTool(BaseTool):
     }
 
     async def execute(self, inputs: dict, memory: SharedMemory) -> str:
-        meds = [m.lower().strip() for m in inputs.get("medications", [])]
-        warnings: list[str] = []
-
-        for pair, warning in KNOWN_INTERACTIONS.items():
-            if pair.issubset(set(meds)):
-                warnings.append(f"{' + '.join(pair)}: {warning}")
-                memory.flags.append(ClinicalFlag(
-                    field="drug_interaction",
-                    reason=warning,
-                    severity="SAFETY",
-                    source_docs=[],
-                ))
-
-        if not warnings:
-            return "[DRUG_LOOKUP_OK] No known interactions found"
-        return f"[DRUG_INTERACTION_WARNING] {'; '.join(warnings)}"
+        try:
+            meds = [m.lower().strip() for m in inputs.get("medications", [])]
+            warnings: list[str] = []
+            for pair, warning in KNOWN_INTERACTIONS.items():
+                if pair.issubset(set(meds)):
+                    warnings.append(f"{' + '.join(sorted(pair))}: {warning}")
+                    memory.flags.append(ClinicalFlag(
+                        field="drug_interaction",
+                        reason=warning,
+                        severity="SAFETY",
+                        source_docs=[],
+                    ))
+            if not warnings:
+                return "[DRUG_LOOKUP_OK] No known interactions found"
+            return f"[DRUG_INTERACTION_WARNING] {'; '.join(warnings)}"
+        except Exception as exc:
+            return f"[DRUG_LOOKUP_UNAVAILABLE] {exc}"

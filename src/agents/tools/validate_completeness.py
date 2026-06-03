@@ -1,8 +1,7 @@
-from __future__ import annotations
 import json
 from src.agents.tools.base import BaseTool
 from src.providers.base.llm_provider import BaseLLMProvider
-from src.agents.shared_memory import SharedMemory
+from src.agents.shared_memory import SharedMemory, ClinicalFlag
 
 REQUIRED_SECTIONS = [
     "patient_demographics", "admission_date", "discharge_date",
@@ -44,16 +43,18 @@ class ValidateCompletenessTool(BaseTool):
             {"role": "system", "content": VALIDATE_SYSTEM_PROMPT},
             {"role": "user", "content": (
                 f"Extracted sections: {json.dumps(sections_summary)}\n"
-                f"Missing sections: {missing_sections}\n"
-                f"Existing flags count: {len(memory.flags)}"
+                f"Missing sections: {missing_sections}"
             )},
         ]
 
-        content, _, _ = await self._provider.stream_complete(
-            messages=messages, tools=None,
-            memory=memory, agent="critic",
-            action="validate_completeness", inputs={},
-        )
+        try:
+            content, _, _ = await self._provider.stream_complete(
+                messages=messages, tools=None,
+                memory=memory, agent="critic",
+                action="validate_completeness", inputs={},
+            )
+        except Exception as exc:
+            return f"[VALIDATION_UNAVAILABLE] {exc}"
 
         try:
             issues = json.loads(content)
@@ -61,6 +62,14 @@ class ValidateCompletenessTool(BaseTool):
                 issues = []
         except (json.JSONDecodeError, TypeError):
             issues = []
+
+        for issue in issues:
+            memory.flags.append(ClinicalFlag(
+                field="validation",
+                reason=str(issue),
+                severity="MISSING",
+                source_docs=[],
+            ))
 
         if not issues:
             return "[VALIDATION_OK] All sections present and sourced"
