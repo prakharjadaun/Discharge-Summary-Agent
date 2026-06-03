@@ -1,6 +1,6 @@
 from __future__ import annotations
 import time
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Awaitable, Callable
 
 from src.agents.shared_memory import SharedMemory, TraceStep
@@ -30,6 +30,8 @@ class LLMCallTracer:
         pass
 
     async def record(self, reasoning: str, response) -> TraceStep:
+        if self._start is None:
+            raise RuntimeError("LLMCallTracer.record() called outside a 'with' block")
         latency_ms = round((time.perf_counter() - self._start) * 1000, 2)
         step = TraceStep(
             step_id=self._memory.step_count,
@@ -41,7 +43,7 @@ class LLMCallTracer:
             tokens_in=response.usage.prompt_tokens,
             tokens_out=response.usage.completion_tokens,
             latency_ms=latency_ms,
-            timestamp=datetime.utcnow(),
+            timestamp=datetime.now(timezone.utc),
         )
         self._memory.trace.append(step)
         self._memory.step_count += 1
@@ -50,6 +52,8 @@ class LLMCallTracer:
         return step
 
     async def record_failure(self, error: str) -> TraceStep:
+        if self._start is None:
+            raise RuntimeError("LLMCallTracer.record() called outside a 'with' block")
         latency_ms = round((time.perf_counter() - self._start) * 1000, 2)
         step = TraceStep(
             step_id=self._memory.step_count,
@@ -61,7 +65,7 @@ class LLMCallTracer:
             tokens_in=0,
             tokens_out=0,
             latency_ms=latency_ms,
-            timestamp=datetime.utcnow(),
+            timestamp=datetime.now(timezone.utc),
         )
         self._memory.trace.append(step)
         self._memory.step_count += 1
