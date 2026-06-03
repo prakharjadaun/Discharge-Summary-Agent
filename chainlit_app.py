@@ -11,23 +11,7 @@ from src.agents.tools import build_critic_registry, build_executor_registry
 from src.agents.tools.read_pdf import ReadPDFTool
 from src.providers.azure.llm_provider import AsyncAzureLLMProvider
 from src.utils.pdf_cache import PDFCache
-from src.utils.output_writer import save_output
-
-REQUIRED_SECTIONS = [
-    "patient_demographics", "admission_date", "discharge_date",
-    "principal_diagnosis", "secondary_diagnoses", "hospital_course",
-    "procedures", "discharge_medications", "allergies",
-    "follow_up_instructions", "pending_results", "discharge_condition",
-]
-
-SEVERITY_ICON = {
-    "MISSING": "⚠️", "PENDING": "⏳", "CONFLICT": "🔴",
-    "RECONCILIATION_NEEDED": "💊", "SAFETY": "🚨",
-}
-
-CONFIDENCE_BADGE = {
-    "found": "✓ found", "pending": "⏳ pending", "missing": "⚠ missing",
-}
+from src.utils.output_writer import save_output, REQUIRED_SECTIONS, SEVERITY_ICON, CONFIDENCE_BADGE
 
 
 @cl.on_chat_start

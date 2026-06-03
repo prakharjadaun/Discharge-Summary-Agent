@@ -1,3 +1,4 @@
+import hashlib
 import json
 from pathlib import Path
 import pytest
@@ -67,9 +68,11 @@ def test_corrupt_cache_file_returns_none(tmp_path):
     pdf = tmp_path / "doc.pdf"
     pdf.write_bytes(b"content")
     cache = PDFCache(str(tmp_path / ".cache"))
-    # Pre-compute hash and write garbage JSON directly
-    sha = cache._file_hash(str(pdf))
+    # Warm the cache normally first
+    pages = [{"page_num": 0, "text": "hello", "method": "pymupdf", "char_count": 5}]
+    cache.put(str(pdf), pages)
+    # Now find and corrupt the file
+    sha = hashlib.sha256(b"content").hexdigest()
     corrupt = tmp_path / ".cache" / f"{sha}.json"
-    corrupt.parent.mkdir(parents=True, exist_ok=True)
     corrupt.write_text("NOT VALID JSON {{{", encoding="utf-8")
     assert cache.get(str(pdf)) is None

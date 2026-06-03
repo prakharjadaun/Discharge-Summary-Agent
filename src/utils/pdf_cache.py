@@ -4,6 +4,7 @@ import hashlib
 import json
 import logging
 import os
+import tempfile
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -37,9 +38,12 @@ class PDFCache:
                 "pages": pages,
             }
             cache_file = self._dir / f"{sha}.json"
-            tmp = cache_file.with_suffix(".tmp")
-            tmp.write_text(json.dumps(entry, ensure_ascii=False, indent=2), encoding="utf-8")
-            os.replace(str(tmp), str(cache_file))
+            with tempfile.NamedTemporaryFile(
+                mode="w", encoding="utf-8", dir=self._dir, suffix=".tmp", delete=False
+            ) as f:
+                f.write(json.dumps(entry, ensure_ascii=False, indent=2))
+                tmp_path = f.name
+            os.replace(tmp_path, str(cache_file))
         except Exception as e:
             _log.warning("Cache put failed for %s: %s", file_path, e)
 

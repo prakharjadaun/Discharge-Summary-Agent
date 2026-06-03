@@ -6,19 +6,19 @@ from pathlib import Path
 
 from src.agents.shared_memory import SharedMemory
 
-_REQUIRED_SECTIONS = [
+REQUIRED_SECTIONS = [
     "patient_demographics", "admission_date", "discharge_date",
     "principal_diagnosis", "secondary_diagnoses", "hospital_course",
     "procedures", "discharge_medications", "allergies",
     "follow_up_instructions", "pending_results", "discharge_condition",
 ]
 
-_SEVERITY_ICON = {
+SEVERITY_ICON = {
     "MISSING": "⚠️", "PENDING": "⏳", "CONFLICT": "🔴",
     "RECONCILIATION_NEEDED": "💊", "SAFETY": "🚨",
 }
 
-_CONFIDENCE_BADGE = {
+CONFIDENCE_BADGE = {
     "found": "✓ found", "pending": "⏳ pending", "missing": "⚠ missing",
 }
 
@@ -46,7 +46,7 @@ def _write_summary_md(memory: SharedMemory, out: Path) -> None:
         "",
     ]
     sections = memory.draft or {}
-    for key in _REQUIRED_SECTIONS:
+    for key in REQUIRED_SECTIONS:
         field = sections.get(key) or {}
         if isinstance(field, dict):
             value = field.get("value") or "**[MISSING — flagged for clinician review]**"
@@ -54,14 +54,14 @@ def _write_summary_md(memory: SharedMemory, out: Path) -> None:
         else:
             value = "**[MISSING — flagged for clinician review]**"
             confidence = "missing"
-        badge = _CONFIDENCE_BADGE.get(confidence, "?")
+        badge = CONFIDENCE_BADGE.get(confidence, "?")
         label = key.replace("_", " ").title()
         lines += [f"## {label}  `{badge}`", "", value, ""]
 
     if memory.flags:
         lines += ["## Clinical Flags", ""]
         for f in memory.flags:
-            icon = _SEVERITY_ICON.get(f.severity, "⚠️")
+            icon = SEVERITY_ICON.get(f.severity, "⚠️")
             lines.append(f"- {icon} **{f.severity}** | `{f.field}` — {f.reason}")
         lines.append("")
 

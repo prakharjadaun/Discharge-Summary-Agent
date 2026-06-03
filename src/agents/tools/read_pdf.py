@@ -112,7 +112,7 @@ class ReadPDFTool(BaseTool):
         if len(text) >= _MIN_CHARS:
             return text, "pymupdf"
 
-        ocr_text = await asyncio.get_event_loop().run_in_executor(None, self._ocr_page, page)
+        ocr_text = await asyncio.get_running_loop().run_in_executor(None, self._ocr_page, page)
         if len(ocr_text) >= _MIN_CHARS:
             return ocr_text, "ocr"
 
