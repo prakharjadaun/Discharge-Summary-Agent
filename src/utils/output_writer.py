@@ -93,6 +93,10 @@ def _write_trace_json(memory: SharedMemory, out: Path) -> None:
 
 def _write_flags_json(memory: SharedMemory, out: Path) -> None:
     data = {
+        "source_documents": [
+            {"path": d.path, "page_count": d.page_count, "extraction_method": d.extraction_method}
+            for d in memory.source_documents
+        ],
         "flags": [f.model_dump() for f in memory.flags],
         "conflicts": [c.model_dump() for c in memory.conflicts],
     }

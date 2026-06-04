@@ -1,10 +1,28 @@
+# secrets
 .env
+
+# patient data — never commit
+data/
+
+# cache & output artefacts
+.pdf_cache/
+output/
+
+# python
 __pycache__/
 *.pyc
+*.pyo
 .pytest_cache/
 *.egg-info/
 dist/
+*.egg
+
+# tools
 .chainlit/
+.claude/
 docs/superpowers/
-.pdf_cache/
-output/
+
+# venv
+healthcare_venv/
+venv/
+.venv/

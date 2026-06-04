@@ -10,6 +10,7 @@ class Settings(BaseSettings):
     agent_max_steps: int = 50
     agent_max_handoff_rounds: int = 3
     pdf_ocr_fallback_min_chars: int = 50
+    pdf_max_pages: int = 5
 
     model_config = SettingsConfigDict(env_file=".env", case_sensitive=False)
 

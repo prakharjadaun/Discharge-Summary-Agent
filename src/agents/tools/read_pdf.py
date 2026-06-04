@@ -19,6 +19,7 @@ if TYPE_CHECKING:
 _log = logging.getLogger(__name__)
 
 _MIN_CHARS = settings.pdf_ocr_fallback_min_chars
+_MAX_PAGES = settings.pdf_max_pages
 _METHOD_RANK = {"pymupdf": 0, "ocr": 1, "vision": 2, "failed": 3}
 
 
@@ -62,7 +63,7 @@ class ReadPDFTool(BaseTool):
 
         try:
             with fitz.open(path) as doc:
-                for page in doc:
+                for page in list(doc)[:_MAX_PAGES]:
                     text, method = await self._read_page(page)
                     pages_text.append(text)
                     page_results.append({
@@ -92,7 +93,7 @@ class ReadPDFTool(BaseTool):
         return f"[READ_PDF_OK] {path} — {len(full_text)} chars via {worst_method}"
 
     def _load_from_cache(self, path: str, entry: dict, memory: SharedMemory) -> str:
-        pages = entry.get("pages", [])
+        pages = entry.get("pages", [])[:_MAX_PAGES]
         full_text = "\n\n".join(p["text"] for p in pages)
         worst_method = max(
             (p.get("method", "pymupdf") for p in pages),
