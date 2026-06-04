@@ -19,44 +19,31 @@ async def on_start():
     await cl.Message(
         content=(
             "## Discharge Summary Agent\n\n"
-            "Paste the path to a **patient folder** (containing PDFs) "
-            "or a **single PDF file**.\n\n"
-            "**Patient 2 (single PDF):**\n"
-            "```\n"
-            "data/patient 2 (1)_260603_095051.pdf\n"
-            "```\n\n"
-            "**Patient 1 (folder — run `python scripts/generate_patient1.py` first):**\n"
-            "```\n"
-            "data/patient1\n"
-            "```"
+            "Upload a patient PDF using the **📎 attachment button** in the input box below, then hit send."
         )
     ).send()
 
 
 @cl.on_message
 async def on_message(message: cl.Message):
-    input_path = message.content.strip()
-    p = Path(input_path)
+    # Accept uploaded PDF files
+    pdf_elements = [
+        el for el in (message.elements or [])
+        if getattr(el, "mime", "") == "application/pdf"
+        or (getattr(el, "name", "") or "").lower().endswith(".pdf")
+    ]
 
-    if not p.exists():
+    if not pdf_elements:
         await cl.Message(
-            content=f"❌ Path not found: `{input_path}`\n\nCheck the path and try again."
+            content="Please upload a PDF file using the 📎 attachment button, then send."
         ).send()
         return
 
-    if p.is_file() and p.suffix.lower() == ".pdf":
-        patient_dir = str(p.parent)
-        pdf_files = [str(p)]
-        patient_id = p.stem
-    elif p.is_dir():
-        patient_dir = str(p)
-        pdf_files = [str(f) for f in p.glob("*.pdf")]
-        patient_id = p.name
-    else:
-        await cl.Message(
-            content=f"❌ Expected a PDF file or a directory: `{input_path}`"
-        ).send()
-        return
+    uploaded = pdf_elements[0]
+    pdf_path = uploaded.path          # server-side temp path
+    patient_id = Path(uploaded.name).stem
+    patient_dir = str(Path(pdf_path).parent)
+    pdf_files = [pdf_path]
 
     if not pdf_files:
         await cl.Message(
