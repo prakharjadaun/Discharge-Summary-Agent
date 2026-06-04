@@ -1,5 +1,6 @@
 # secrets
 .env
+.envrc
 
 # patient data — never commit
 data/
@@ -10,12 +11,18 @@ output/
 
 # python
 __pycache__/
-*.pyc
+*.py[codz]
+*$py.class
+*.so
 *.pyo
 .pytest_cache/
 *.egg-info/
-dist/
 *.egg
+dist/
+build/
+MANIFEST
+.mypy_cache/
+.ruff_cache/
 
 # tools
 .chainlit/
@@ -26,3 +33,12 @@ docs/superpowers/
 healthcare_venv/
 venv/
 .venv/
+env/
+
+# jupyter
+.ipynb_checkpoints
+
+# ide
+.idea/
+.vscode/
+tempCodeRunnerFile.py
